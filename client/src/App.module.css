@@ -1,0 +1,43 @@
+.loadingScreen {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dark);
+}
+
+.loadingText {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  font-style: italic;
+}
+
+.errorText {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  max-width: 400px;
+  text-align: center;
+  padding: 0 1.5rem;
+}
+
+.adminTrigger {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  z-index: 200;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.6rem 1rem;
+  transition: all var(--transition);
+}
+
+.adminTrigger:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}

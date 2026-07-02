@@ -1,0 +1,39 @@
+.msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+}
+
+.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.bot {
+  align-self: flex-start;
+}
+
+.bubble {
+  padding: 0.75rem 1rem;
+  font-size: 0.83rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.bot .bubble {
+  background: var(--dark-3);
+  color: var(--text);
+  border-radius: 0 8px 8px 8px;
+}
+
+.user .bubble {
+  background: var(--gold);
+  color: var(--dark);
+  border-radius: 8px 8px 0 8px;
+}
+
+.time {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  margin-top: 0.3rem;
+}

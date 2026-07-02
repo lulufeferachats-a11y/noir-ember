@@ -1,0 +1,248 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.panel {
+  background: var(--dark-2);
+  border: 1px solid var(--border);
+  width: 95vw;
+  max-width: 1100px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.header {
+  padding: 2rem 2.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--dark-2);
+  z-index: 1;
+}
+
+.title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.8rem;
+  color: var(--text);
+}
+
+.closeBtn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all var(--transition);
+}
+
+.closeBtn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding: 2rem 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat {
+  background: var(--dark-3);
+  border: 1px solid var(--border);
+  padding: 1.2rem 1.5rem;
+}
+
+.statNum {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.gold { color: var(--gold); }
+.success { color: var(--success); }
+.danger { color: var(--danger); }
+
+.statLabel {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 0.3rem;
+}
+
+.body {
+  padding: 2rem 2.5rem;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.5rem 1.2rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all var(--transition);
+}
+
+.filterActive,
+.filterBtn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  vertical-align: top;
+}
+
+.table tr:hover td {
+  background: var(--dark-3);
+}
+
+.idCell {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.nameCell {
+  color: var(--text);
+}
+
+.centerCell {
+  text-align: center;
+}
+
+.goldText {
+  color: var(--gold);
+}
+
+.dimText {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.notesCell {
+  font-style: italic;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.6rem;
+  border-radius: 2px;
+}
+
+.status_pending {
+  background: rgba(201, 169, 110, 0.1);
+  color: var(--gold);
+  border: 1px solid rgba(201, 169, 110, 0.3);
+}
+
+.status_confirmed {
+  background: rgba(50, 150, 100, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(50, 150, 100, 0.3);
+}
+
+.status_cancelled {
+  background: rgba(200, 60, 60, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(200, 60, 60, 0.3);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.7rem;
+  transition: all var(--transition);
+}
+
+.confirm:hover { border-color: var(--success); color: var(--success); }
+.cancelAction:hover { border-color: var(--danger); color: var(--danger); }
+.deleteAction:hover { border-color: var(--danger); color: var(--danger); }
+
+.empty {
+  text-align: center;
+  padding: 4rem;
+  color: var(--text-dim);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .panel {
+    width: 100%;
+    max-height: 100vh;
+  }
+  .table {
+    font-size: 0.75rem;
+  }
+  .hideOnMobile {
+    display: none;
+  }
+}

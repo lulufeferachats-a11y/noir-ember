@@ -145,9 +145,10 @@ async function advanceReservationFlow(
     return { reply: 'Let\'s start over - how many guests will be joining you?' };
   }
 
-  const result = currentStepDef.parse(message);
+ const result = currentStepDef.parse(message);
   if ('error' in result) {
-    return { reply: String(result.error ?? 'An error occurred.') };
+    const errorMsg: string = result.error !== undefined ? result.error : 'An error occurred.';
+    return { reply: errorMsg };
   }
 
   (state.draft as Record<string, string | number>)[currentStepDef.key] = result.value;

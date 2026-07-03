@@ -21,7 +21,6 @@ export type ChatIntent =
   | 'thanks'
   | 'fallback';
 
-/** A single field collected during the reservation flow. */
 export type ReservationFieldKey =
   | 'guests'
   | 'reservationDate'
@@ -41,11 +40,6 @@ export interface ReservationDraft {
   notes?: string;
 }
 
-/**
- * Memory the chatbot retains across a single conversation - PARTIE 6.
- * Lets returning guests skip re-entering their name, phone, or email
- * if they start a second reservation in the same session.
- */
 export interface ConversationMemory {
   customerName?: string;
   phone?: string;

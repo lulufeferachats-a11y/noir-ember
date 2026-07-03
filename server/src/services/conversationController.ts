@@ -127,7 +127,7 @@ function startReservationFlow(state: ConversationState): string {
   if (state.memory.email) state.draft.email = state.memory.email;
 
   const next = findNextStep(state);
-  state.currentStep = next?.key ?? null;
+  state.currentStep = next?.key ?? 'guests';
 
   const intro = "Wonderful! I'll help you secure your table. Let's begin:";
   const question = next ? next.question(state) : '';

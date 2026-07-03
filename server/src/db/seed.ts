@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { db } from './client.js';
 import { restaurants } from './schema.js';
+import { eq } from 'drizzle-orm';
 import type { RestaurantSettings } from './schema.js';
 
 /**
@@ -83,7 +84,7 @@ async function seed() {
         settings: noirEmberSettings,
         updatedAt: new Date(),
       })
-      .where((r: any) => r.id === existing.id);
+      .where(eq(restaurants.id, existing.id));
     console.log('Updated existing restaurant row.');
   } else {
     await db.insert(restaurants).values({

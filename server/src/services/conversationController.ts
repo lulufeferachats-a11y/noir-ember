@@ -147,7 +147,7 @@ async function advanceReservationFlow(
 
   const result = currentStepDef.parse(message);
   if ('error' in result) {
-    return { reply: result.error };
+    return { reply: String(result.error ?? 'An error occurred.') };
   }
 
   (state.draft as Record<string, string | number>)[currentStepDef.key] = result.value;

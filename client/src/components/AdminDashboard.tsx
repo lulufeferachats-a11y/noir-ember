@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react';
 import styles from './AdminDashboard.module.css';
 import { AdminLogin } from './AdminLogin';
 import { ReservationEditModal } from './ReservationEditModal';
+import { RestaurantContentEditor } from './RestaurantContentEditor';
 import { useAdmin } from '../hooks/useAdmin';
-import type { Reservation, ReservationStatus } from '../types';
+import type { Reservation, ReservationStatus, RestaurantConfig } from '../types';
 
 interface AdminDashboardProps {
   isOpen: boolean;
   onClose: () => void;
   restaurantName: string;
+  restaurant: RestaurantConfig | null;
+  onRestaurantUpdated: () => void;
 }
 
 const FILTERS: Array<{ value: ReservationStatus | 'all'; label: string }> = [
@@ -30,10 +33,11 @@ function formatTime(timeStr: string): string {
   return `${h12}:${m} ${ampm}`;
 }
 
-export function AdminDashboard({ isOpen, onClose, restaurantName }: AdminDashboardProps) {
+export function AdminDashboard({ isOpen, onClose, restaurantName, restaurant, onRestaurantUpdated }: AdminDashboardProps) {
   const admin = useAdmin();
   const [filter, setFilter] = useState<ReservationStatus | 'all'>('all');
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [activeSection, setActiveSection] = useState<'reservations' | 'content'>('reservations');
 
   useEffect(() => {
     if (isOpen && admin.isAuthenticated) {
@@ -71,94 +75,86 @@ export function AdminDashboard({ isOpen, onClose, restaurantName }: AdminDashboa
         ) : (
           <>
             <div className={styles.header}>
-              <span className={styles.title}>{restaurantName} — Reservations</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                <span className={styles.title}>{restaurantName}</span>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className={`${styles.filterBtn} ${activeSection === 'reservations' ? styles.filterActive : ''}`} onClick={() => setActiveSection('reservations')}>
+                    📋 Reservations
+                  </button>
+                  <button className={`${styles.filterBtn} ${activeSection === 'content' ? styles.filterActive : ''}`} onClick={() => setActiveSection('content')}>
+                    ✏️ Content
+                  </button>
+                </div>
+              </div>
               <button className={styles.closeBtn} onClick={onClose}>Close</button>
             </div>
 
-            {admin.stats && (
-              <div className={styles.stats}>
-                <div className={styles.stat}>
-                  <div className={styles.statNum}>{admin.stats.total}</div>
-                  <div className={styles.statLabel}>Total</div>
+            {activeSection === 'reservations' && (
+              <>
+                {admin.stats && (
+                  <div className={styles.stats}>
+                    <div className={styles.stat}><div className={styles.statNum}>{admin.stats.total}</div><div className={styles.statLabel}>Total</div></div>
+                    <div className={styles.stat}><div className={`${styles.statNum} ${styles.gold}`}>{admin.stats.pending}</div><div className={styles.statLabel}>Pending</div></div>
+                    <div className={styles.stat}><div className={`${styles.statNum} ${styles.success}`}>{admin.stats.confirmed}</div><div className={styles.statLabel}>Confirmed</div></div>
+                    <div className={styles.stat}><div className={`${styles.statNum} ${styles.danger}`}>{admin.stats.cancelled}</div><div className={styles.statLabel}>Cancelled</div></div>
+                  </div>
+                )}
+                <div className={styles.body}>
+                  <div className={styles.filters}>
+                    {FILTERS.map((f) => (
+                      <button key={f.value} className={`${styles.filterBtn} ${filter === f.value ? styles.filterActive : ''}`} onClick={() => setFilter(f.value)}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                  {admin.isLoading ? (
+                    <div className={styles.empty}>Loading…</div>
+                  ) : admin.reservations.length === 0 ? (
+                    <div className={styles.empty}>No reservations found.</div>
+                  ) : (
+                    <div className={styles.tableWrap}>
+                      <table className={styles.table}>
+                        <thead>
+                          <tr>
+                            <th>#</th><th>Guest</th><th>Date &amp; Time</th><th>Guests</th>
+                            <th>Contact</th><th className={styles.hideOnMobile}>Notes</th><th>Status</th><th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {admin.reservations.map((r) => (
+                            <tr key={r.id}>
+                              <td className={styles.idCell}>#{r.id}</td>
+                              <td className={styles.nameCell}>{r.customerName}</td>
+                              <td>{formatDate(r.reservationDate)}<br /><span className={styles.goldText}>{formatTime(r.reservationTime)}</span></td>
+                              <td className={styles.centerCell}>{r.guests}</td>
+                              <td>{r.phone}{r.email && <><br /><span className={styles.dimText}>{r.email}</span></>}</td>
+                              <td className={`${styles.notesCell} ${styles.hideOnMobile}`}>{r.notes || '—'}</td>
+                              <td><span className={`${styles.badge} ${styles[`status_${r.status}`]}`}>{r.status}</span></td>
+                              <td>
+                                <div className={styles.actions}>
+                                  {r.status !== 'confirmed' && <button className={`${styles.actionBtn} ${styles.confirm}`} onClick={() => admin.updateStatus(r.id, 'confirmed')}>Confirm</button>}
+                                  {r.status !== 'cancelled' && <button className={`${styles.actionBtn} ${styles.cancelAction}`} onClick={() => admin.updateStatus(r.id, 'cancelled')}>Cancel</button>}
+                                  <button className={styles.actionBtn} onClick={() => setEditingReservation(r)}>Edit</button>
+                                  <button className={`${styles.actionBtn} ${styles.deleteAction}`} onClick={() => handleDelete(r.id)}>Delete</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-                <div className={styles.stat}>
-                  <div className={`${styles.statNum} ${styles.gold}`}>{admin.stats.pending}</div>
-                  <div className={styles.statLabel}>Pending</div>
-                </div>
-                <div className={styles.stat}>
-                  <div className={`${styles.statNum} ${styles.success}`}>{admin.stats.confirmed}</div>
-                  <div className={styles.statLabel}>Confirmed</div>
-                </div>
-                <div className={styles.stat}>
-                  <div className={`${styles.statNum} ${styles.danger}`}>{admin.stats.cancelled}</div>
-                  <div className={styles.statLabel}>Cancelled</div>
-                </div>
-              </div>
+              </>
             )}
 
-            <div className={styles.body}>
-              <div className={styles.filters}>
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.value}
-                    className={`${styles.filterBtn} ${filter === f.value ? styles.filterActive : ''}`}
-                    onClick={() => setFilter(f.value)}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-
-              {admin.isLoading ? (
-                <div className={styles.empty}>Loading…</div>
-              ) : admin.reservations.length === 0 ? (
-                <div className={styles.empty}>No reservations found.</div>
-              ) : (
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>#</th><th>Guest</th><th>Date &amp; Time</th><th>Guests</th>
-                        <th>Contact</th><th className={styles.hideOnMobile}>Notes</th><th>Status</th><th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {admin.reservations.map((r) => (
-                        <tr key={r.id}>
-                          <td className={styles.idCell}>#{r.id}</td>
-                          <td className={styles.nameCell}>{r.customerName}</td>
-                          <td>
-                            {formatDate(r.reservationDate)}<br />
-                            <span className={styles.goldText}>{formatTime(r.reservationTime)}</span>
-                          </td>
-                          <td className={styles.centerCell}>{r.guests}</td>
-                          <td>
-                            {r.phone}
-                            {r.email && <><br /><span className={styles.dimText}>{r.email}</span></>}
-                          </td>
-                          <td className={`${styles.notesCell} ${styles.hideOnMobile}`}>{r.notes || '—'}</td>
-                          <td>
-                            <span className={`${styles.badge} ${styles[`status_${r.status}`]}`}>{r.status}</span>
-                          </td>
-                          <td>
-                            <div className={styles.actions}>
-                              {r.status !== 'confirmed' && (
-                                <button className={`${styles.actionBtn} ${styles.confirm}`} onClick={() => admin.updateStatus(r.id, 'confirmed')}>Confirm</button>
-                              )}
-                              {r.status !== 'cancelled' && (
-                                <button className={`${styles.actionBtn} ${styles.cancelAction}`} onClick={() => admin.updateStatus(r.id, 'cancelled')}>Cancel</button>
-                              )}
-                              <button className={styles.actionBtn} onClick={() => setEditingReservation(r)}>Edit</button>
-                              <button className={`${styles.actionBtn} ${styles.deleteAction}`} onClick={() => handleDelete(r.id)}>Delete</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+            {activeSection === 'content' && restaurant && admin.credentials && (
+              <RestaurantContentEditor
+                restaurant={restaurant}
+                credentials={admin.credentials}
+                onSaved={onRestaurantUpdated}
+              />
+            )}
           </>
         )}
       </div>

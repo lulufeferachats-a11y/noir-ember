@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fetchRestaurantConfig } from '../services/restaurantService';
 import type { RestaurantConfig } from '../types';
 
@@ -6,16 +6,18 @@ interface UseRestaurantResult {
   restaurant: RestaurantConfig | null;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
-/** Loads the current tenant's public config once on mount. */
 export function useRestaurant(): UseRestaurantResult {
   const [restaurant, setRestaurant] = useState<RestaurantConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
 
     fetchRestaurantConfig()
       .then((data) => {
@@ -31,7 +33,9 @@ export function useRestaurant(): UseRestaurantResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tick]);
 
-  return { restaurant, loading, error };
+  const refetch = useCallback(() => setTick(t => t + 1), []);
+
+  return { restaurant, loading, error, refetch };
 }

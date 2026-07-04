@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { Navigation } from './components/Navigation';
 import { Hero } from './components/Hero';
 import { About } from './components/About';
@@ -12,10 +12,14 @@ import { useRestaurant } from './hooks/useRestaurant';
 import styles from './App.module.css';
 
 export default function App() {
-  const { restaurant, loading, error } = useRestaurant();
+  const { restaurant, loading, error, refetch } = useRestaurant();
   const [chatOpen, setChatOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const sendMessageRef = useRef<((text: string) => void) | null>(null);
+
+  const handleRestaurantUpdated = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   if (loading) {
     return (
@@ -70,6 +74,8 @@ export default function App() {
         isOpen={adminOpen}
         onClose={() => setAdminOpen(false)}
         restaurantName={restaurant.name}
+        restaurant={restaurant}
+        onRestaurantUpdated={handleRestaurantUpdated}
       />
     </>
   );

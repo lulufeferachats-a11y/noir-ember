@@ -38,6 +38,8 @@ export interface RestaurantSettings {
   chefInfo?: string;
   faq?: FaqEntry[];
   menu?: MenuCategory[];
+  maxCapacityPerSlot?: number;
+  slotDurationMinutes?: number;
 }
 
 export interface RestaurantConfig {

@@ -11,6 +11,7 @@ import type { Reservation, ReservationStats, ReservationStatus } from '../types'
 
 interface UseAdminResult {
   isAuthenticated: boolean;
+  credentials: AdminCredentials | null;
   isLoading: boolean;
   error: string | null;
   reservations: Reservation[];
@@ -23,7 +24,6 @@ interface UseAdminResult {
   removeReservation: (id: number) => Promise<void>;
 }
 
-/** Centralizes admin auth state and reservation CRUD for the dashboard. */
 export function useAdmin(): UseAdminResult {
   const [credentials, setCredentials] = useState<AdminCredentials | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,26 +31,23 @@ export function useAdmin(): UseAdminResult {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [stats, setStats] = useState<ReservationStats | null>(null);
 
-  const refresh = useCallback(
-    async (status?: ReservationStatus) => {
-      if (!credentials) return;
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [res, statResult] = await Promise.all([
-          fetchReservations(credentials, status ? { status } : {}),
-          fetchReservationStats(credentials),
-        ]);
-        setReservations(res);
-        setStats(statResult);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load reservations.');
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [credentials]
-  );
+  const refresh = useCallback(async (status?: ReservationStatus) => {
+    if (!credentials) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [res, statResult] = await Promise.all([
+        fetchReservations(credentials, status ? { status } : {}),
+        fetchReservationStats(credentials),
+      ]);
+      setReservations(res);
+      setStats(statResult);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load reservations.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [credentials]);
 
   const login = useCallback(async (username: string, password: string) => {
     const ok = await adminLogin({ username, password });
@@ -68,35 +65,27 @@ export function useAdmin(): UseAdminResult {
     setStats(null);
   }, []);
 
-  const updateStatus = useCallback(
-    async (id: number, status: ReservationStatus) => {
-      if (!credentials) return;
-      await updateReservationApi(credentials, id, { status });
-      await refresh();
-    },
-    [credentials, refresh]
-  );
+  const updateStatus = useCallback(async (id: number, status: ReservationStatus) => {
+    if (!credentials) return;
+    await updateReservationApi(credentials, id, { status });
+    await refresh();
+  }, [credentials, refresh]);
 
-  const saveReservation = useCallback(
-    async (id: number, updates: Partial<Reservation>) => {
-      if (!credentials) return;
-      await updateReservationApi(credentials, id, updates);
-      await refresh();
-    },
-    [credentials, refresh]
-  );
+  const saveReservation = useCallback(async (id: number, updates: Partial<Reservation>) => {
+    if (!credentials) return;
+    await updateReservationApi(credentials, id, updates);
+    await refresh();
+  }, [credentials, refresh]);
 
-  const removeReservation = useCallback(
-    async (id: number) => {
-      if (!credentials) return;
-      await deleteReservationApi(credentials, id);
-      await refresh();
-    },
-    [credentials, refresh]
-  );
+  const removeReservation = useCallback(async (id: number) => {
+    if (!credentials) return;
+    await deleteReservationApi(credentials, id);
+    await refresh();
+  }, [credentials, refresh]);
 
   return {
     isAuthenticated: credentials !== null,
+    credentials,
     isLoading,
     error,
     reservations,

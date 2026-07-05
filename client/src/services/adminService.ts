@@ -1,3 +1,4 @@
+// v2
 import { apiRequest } from './apiClient';
 import type { Reservation, ReservationStats, ReservationStatus } from '../types';
 
@@ -56,5 +57,21 @@ export async function deleteReservation(credentials: AdminCredentials, id: numbe
   await apiRequest<void>(`/reservations/${id}`, {
     method: 'DELETE',
     adminAuth: credentials,
+  });
+}
+export async function updateRestaurantSettings(
+  credentials: AdminCredentials,
+  data: {
+    name?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    settings?: Record<string, unknown>;
+  }
+): Promise<void> {
+  await apiRequest<{ success: boolean }>('/restaurant/settings', {
+    method: 'PATCH',
+    adminAuth: credentials,
+    body: JSON.stringify(data),
   });
 }

@@ -10,6 +10,7 @@ import { parseNaturalDate, parseNaturalTime } from '../utils/naturalLanguagePars
 import { createReservation, checkAvailability } from './reservationService.js';
 import { createReservationSchema } from '../types/validation.js';
 import { resetReservationFlow } from './conversationStore.js';
+import { sendCustomerConfirmationEmail, sendRestaurantNotificationEmail } from './emailService.js';
 
 const RESERVATION_STEPS: Array<{
   key: ReservationFieldKey;
@@ -229,6 +230,26 @@ async function advanceReservationFlow(
 
   const reservation = await createReservation(restaurant.id, input);
   resetReservationFlow(state);
+
+  // Envoyer les emails de confirmation (sans bloquer la réponse si ça échoue)
+  const emailData = {
+    customerName: reservation.customerName,
+    customerEmail: reservation.email ?? '',
+    guests: reservation.guests,
+    reservationDate: reservation.reservationDate,
+    reservationTime: reservation.reservationTime,
+    phone: reservation.phone,
+    notes: reservation.notes,
+    reservationId: reservation.id,
+    restaurantName: restaurant.name,
+    restaurantPhone: restaurant.phone,
+    restaurantAddress: restaurant.address,
+  };
+
+  Promise.all([
+    sendCustomerConfirmationEmail(emailData),
+    sendRestaurantNotificationEmail(emailData),
+  ]).catch((err) => console.error('Email sending failed:', err));
 
   const summaryLines = [
     `Reservation confirmed!`,

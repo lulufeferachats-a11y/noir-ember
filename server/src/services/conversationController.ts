@@ -74,21 +74,21 @@ const RESERVATION_STEPS: Array<{
   {
     key: 'email',
     optional: true,
-    question: () => 'And your email address? (optional - just say "skip" if you\'d rather not)',
+    question: () => 'And your email address? (optional - say "skip", "passer" or "aucun" to skip)',
     parse: (raw) => {
       const v = raw.trim();
-      if (!v || /^skip$/i.test(v)) return { value: '' };
-      if (!/@/.test(v)) return { error: 'That doesn\'t look like a valid email. Try again, or say "skip".' };
+      if (!v || /^(skip|passer|sauter|ignorer|non|aucun|rien|no)$/i.test(v)) return { value: '' };
+      if (!/@/.test(v)) return { error: 'That doesn\'t look like a valid email. Try again, or say "skip" or "passer".' };
       return { value: v };
     },
   },
   {
     key: 'notes',
     optional: true,
-    question: () => 'Any special requests? Dietary needs, celebrations, seating preference? (optional - say "skip" to continue)',
+    question: () => 'Any special requests? Dietary needs, celebrations, seating preference? (optional - say "skip", "passer" or "aucun" to continue)',
     parse: (raw) => {
       const v = raw.trim();
-      if (/^skip$/i.test(v)) return { value: '' };
+      if (/^(skip|passer|sauter|ignorer|non|aucun|rien|no)$/i.test(v)) return { value: '' };
       return { value: v.slice(0, 500) };
     },
   },
@@ -157,6 +157,32 @@ async function advanceReservationFlow(
   if (currentStepDef.key === 'phone') state.memory.phone = String(result.value);
   if (currentStepDef.key === 'email' && result.value) state.memory.email = String(result.value);
 
+  // Vérification de capacité dès que l'heure est tapée
+  if (currentStepDef.key === 'reservationTime' && state.draft.reservationDate) {
+    const MAX_CAPACITY = 40;
+    const SLOT_MINUTES = 90;
+    const availability = await checkAvailability(
+      restaurant.id,
+      String(state.draft.reservationDate),
+      String(result.value),
+      Number(state.draft.guests ?? 1),
+      MAX_CAPACITY,
+      SLOT_MINUTES
+    );
+    if (!availability.available) {
+      state.draft.reservationTime = undefined;
+      state.currentStep = 'reservationTime';
+      const booked = (availability as { available: false; guestsBooked: number; maxCapacity: number }).guestsBooked;
+      const max = (availability as { available: false; guestsBooked: number; maxCapacity: number }).maxCapacity;
+      const remaining = max - booked;
+      return {
+        reply: remaining <= 0
+          ? `I'm sorry, we're fully booked at that time. Could you choose a different time?`
+          : `I'm sorry, we only have ${remaining} spots left at that time for your party of ${state.draft.guests}. Could you choose a different time?`,
+      };
+    }
+  }
+
   const next = findNextStep(state);
   if (next) {
     state.currentStep = next.key;
@@ -191,7 +217,9 @@ async function advanceReservationFlow(
     state.draft.reservationDate = undefined;
     state.draft.reservationTime = undefined;
     state.currentStep = 'reservationDate';
-    const remaining = availability.maxCapacity - availability.guestsBooked;
+    const booked = (availability as { available: false; guestsBooked: number; maxCapacity: number }).guestsBooked;
+    const max = (availability as { available: false; guestsBooked: number; maxCapacity: number }).maxCapacity;
+    const remaining = max - booked;
     return {
       reply: remaining <= 0
         ? `I'm sorry, we're fully booked at that time. Could you choose a different date or time?`

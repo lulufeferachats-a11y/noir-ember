@@ -16,12 +16,11 @@ export function getOrCreateSession(sessionId: string, restaurantId: string): Con
     sessionId,
     restaurantId,
     reservationActive: false,
+    language: null,
     currentStep: null,
     draft: {},
     memory: {},
   };
-  sessions.set(sessionId, fresh);
-  return fresh;
 }
 
 export function saveSession(state: ConversationState): void {

@@ -1,3 +1,5 @@
+export type Language = 'en' | 'fr';
+
 export type ChatIntent =
   | 'greeting'
   | 'reservation'
@@ -50,6 +52,7 @@ export interface ConversationState {
   sessionId: string;
   restaurantId: string;
   reservationActive: boolean;
+  language: Language | null;
   currentStep: ReservationFieldKey | null;
   draft: ReservationDraft;
   memory: ConversationMemory;

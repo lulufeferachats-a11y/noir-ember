@@ -3,6 +3,7 @@ import type {
   ChatResponseBody,
   ConversationState,
   ReservationFieldKey,
+  Language,
 } from '../types/chat.js';
 import { detectIntent } from './intentDetection.js';
 import { buildIntentReply, suggestQuickReplies } from './chatResponses.js';
@@ -11,82 +12,99 @@ import { createReservation, checkAvailability } from './reservationService.js';
 import { createReservationSchema } from '../types/validation.js';
 import { resetReservationFlow } from './conversationStore.js';
 import { sendCustomerConfirmationEmail, sendRestaurantNotificationEmail } from './emailService.js';
+import { t } from './translations.js';
+
+function formatDisplayDate(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00`);
+  return d.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatDisplayTime(timeStr: string): string {
+  const [h, m] = timeStr.split(':');
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  return `${h12}:${m} ${ampm}`;
+}
+
+function detectLanguage(message: string): Language | null {
+  const m = message.toLowerCase().trim();
+  if (/^(fr|français|francais|french|bonjour|oui|non)$/i.test(m)) return 'fr';
+  if (/^(en|english|anglais|hello|yes|no)$/i.test(m)) return 'en';
+  return null;
+}
 
 const RESERVATION_STEPS: Array<{
   key: ReservationFieldKey;
   optional: boolean;
   question: (state: ConversationState) => string;
-  parse: (raw: string) => { value: string | number; error?: undefined } | { value?: undefined; error: string };
+  parse: (raw: string, lang: Language | null) => { value: string | number; error?: undefined } | { value?: undefined; error: string };
 }> = [
   {
     key: 'guests',
     optional: false,
-    question: () => 'How many guests will be joining you?',
-    parse: (raw) => {
+    question: (state) => t(state.language).reservation.steps.guests,
+    parse: (raw, lang) => {
       const n = parseInt(raw.trim(), 10);
-      if (Number.isNaN(n) || n < 1 || n > 50) {
-        return { error: 'Please enter a valid number of guests (1 to 50).' };
-      }
+      if (Number.isNaN(n) || n < 1 || n > 50) return { error: t(lang).reservation.errors.guests };
       return { value: n };
     },
   },
   {
     key: 'reservationDate',
     optional: false,
-    question: () => 'What date would you like to reserve? (e.g. "February 15, 2025")',
-    parse: (raw) => {
+    question: (state) => t(state.language).reservation.steps.reservationDate,
+    parse: (raw, lang) => {
       const parsed = parseNaturalDate(raw);
-      if (!parsed) return { error: 'I didn\'t catch that date. Try a format like "February 15, 2025" or "15/02/2025".' };
+      if (!parsed) return { error: t(lang).reservation.errors.date };
       return { value: parsed };
     },
   },
   {
     key: 'reservationTime',
     optional: false,
-    question: () => 'What time would you prefer? (e.g. "7:30 PM")',
-    parse: (raw) => {
+    question: (state) => t(state.language).reservation.steps.reservationTime,
+    parse: (raw, lang) => {
       const parsed = parseNaturalTime(raw);
-      if (!parsed) return { error: 'Could you share the time like "7:30 PM" or "20:00"?' };
+      if (!parsed) return { error: t(lang).reservation.errors.time };
       return { value: parsed };
     },
   },
   {
     key: 'customerName',
     optional: false,
-    question: (state) => state.memory.customerName
-      ? `Shall I use the name "${state.memory.customerName}" again, or would you like to use a different name?`
-      : 'What name shall I put the reservation under?',
-    parse: (raw) => {
+    question: (state) => t(state.language).reservation.steps.customerName(state.memory.customerName),
+    parse: (raw, lang) => {
       const v = raw.trim();
-      if (v.length < 2) return { error: 'Please enter a valid name.' };
+      if (v.length < 2) return { error: t(lang).reservation.errors.name };
       return { value: v };
     },
   },
   {
     key: 'phone',
     optional: false,
-    question: () => 'A phone number to confirm your reservation?',
-    parse: (raw) => {
+    question: (state) => t(state.language).reservation.steps.phone,
+    parse: (raw, lang) => {
       const v = raw.trim();
-      if (v.replace(/[\s\-()+]/g, '').length < 6) return { error: 'Please enter a valid phone number.' };
+      if (v.replace(/[\s\-()+]/g, '').length < 6) return { error: t(lang).reservation.errors.phone };
       return { value: v };
     },
   },
   {
     key: 'email',
     optional: true,
-    question: () => 'And your email address? (optional - say "skip", "passer" or "aucun" to skip)',
-    parse: (raw) => {
+    question: (state) => t(state.language).reservation.steps.email,
+    parse: (raw, lang) => {
       const v = raw.trim();
       if (!v || /^(skip|passer|sauter|ignorer|non|aucun|rien|no)$/i.test(v)) return { value: '' };
-      if (!/@/.test(v)) return { error: 'That doesn\'t look like a valid email. Try again, or say "skip" or "passer".' };
+      if (!/@/.test(v)) return { error: t(lang).reservation.errors.email };
       return { value: v };
     },
   },
   {
     key: 'notes',
     optional: true,
-    question: () => 'Any special requests? Dietary needs, celebrations, seating preference? (optional - say "skip", "passer" or "aucun" to continue)',
+    question: (state) => t(state.language).reservation.steps.notes,
     parse: (raw) => {
       const v = raw.trim();
       if (/^(skip|passer|sauter|ignorer|non|aucun|rien|no)$/i.test(v)) return { value: '' };
@@ -106,19 +124,6 @@ function findNextStep(state: ConversationState): typeof RESERVATION_STEPS[number
   return null;
 }
 
-function formatDisplayDate(dateStr: string): string {
-  const d = new Date(`${dateStr}T12:00:00`);
-  return d.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-function formatDisplayTime(timeStr: string): string {
-  const [h, m] = timeStr.split(':');
-  const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  return `${h12}:${m} ${ampm}`;
-}
-
 function startReservationFlow(state: ConversationState): string {
   state.reservationActive = true;
   state.draft = {};
@@ -130,7 +135,7 @@ function startReservationFlow(state: ConversationState): string {
   const next = findNextStep(state);
   state.currentStep = next?.key ?? 'guests';
 
-  const intro = "Wonderful! I'll help you secure your table. Let's begin:";
+  const intro = t(state.language).reservation.intro;
   const question = next ? next.question(state) : '';
   return `${intro}\n\n${question}`;
 }
@@ -143,10 +148,10 @@ async function advanceReservationFlow(
   const currentStepDef = RESERVATION_STEPS.find((s) => s.key === state.currentStep);
   if (!currentStepDef) {
     resetReservationFlow(state);
-    return { reply: 'Let\'s start over - how many guests will be joining you?' };
+    return { reply: t(state.language).reservation.startOver };
   }
 
- const result = currentStepDef.parse(message);
+  const result = currentStepDef.parse(message, state.language);
   if ('error' in result) {
     const errorMsg: string = result.error !== undefined ? result.error : 'An error occurred.';
     return { reply: errorMsg };
@@ -178,8 +183,8 @@ async function advanceReservationFlow(
       const remaining = max - booked;
       return {
         reply: remaining <= 0
-          ? `I'm sorry, we're fully booked at that time. Could you choose a different time?`
-          : `I'm sorry, we only have ${remaining} spots left at that time for your party of ${state.draft.guests}. Could you choose a different time?`,
+          ? t(state.language).reservation.capacityFull
+          : t(state.language).reservation.capacityPartial(remaining, Number(state.draft.guests ?? 1)),
       };
     }
   }
@@ -201,10 +206,9 @@ async function advanceReservationFlow(
     source: 'chatbot',
   });
 
-  // Vérification de capacité - limite fixe à 40 couverts
+  // Vérification finale de capacité
   const MAX_CAPACITY = 40;
   const SLOT_MINUTES = 90;
-
   const availability = await checkAvailability(
     restaurant.id,
     input.reservationDate,
@@ -223,15 +227,14 @@ async function advanceReservationFlow(
     const remaining = max - booked;
     return {
       reply: remaining <= 0
-        ? `I'm sorry, we're fully booked at that time. Could you choose a different date or time?`
-        : `I'm sorry, we only have ${remaining} spots left for that slot. Could you choose a different time?`,
+        ? t(state.language).reservation.capacityFull
+        : t(state.language).reservation.capacityPartial(remaining, input.guests),
     };
   }
 
   const reservation = await createReservation(restaurant.id, input);
   resetReservationFlow(state);
 
-  // Envoyer les emails de confirmation (sans bloquer la réponse si ça échoue)
   const emailData = {
     customerName: reservation.customerName,
     customerEmail: reservation.email ?? '',
@@ -251,24 +254,12 @@ async function advanceReservationFlow(
     sendRestaurantNotificationEmail(emailData),
   ]).catch((err) => console.error('Email sending failed:', err));
 
-  const summaryLines = [
-    `Reservation confirmed!`,
-    ``,
-    `Name: ${reservation.customerName}`,
-    `Date: ${formatDisplayDate(reservation.reservationDate)}`,
-    `Time: ${formatDisplayTime(reservation.reservationTime)}`,
-    `Guests: ${reservation.guests}`,
-    `Phone: ${reservation.phone}`,
-    ...(reservation.email ? [`Email: ${reservation.email}`] : []),
-    ...(reservation.notes ? [`Notes: ${reservation.notes}`] : []),
-    ``,
-    `Reservation ID: #${reservation.id}`,
-    ``,
-    `We look forward to welcoming you to ${restaurant.name}.${reservation.email ? `\n\nA confirmation email has been sent to ${reservation.email}.` : ''}\n\nIs there anything else I can help you with?`,
-  ];
-
   return {
-    reply: summaryLines.join('\n'),
+    reply: t(state.language).reservation.confirmed(
+      reservation.customerName,
+      restaurant.name,
+      reservation.email
+    ),
     quickReplies: ['Dress code', 'Parking', 'Menu'],
     reservationCompleted: {
       id: reservation.id,
@@ -286,6 +277,26 @@ export async function handleChatMessage(
   restaurant: Restaurant
 ): Promise<ChatResponseBody> {
   const trimmed = message.trim();
+
+  // Étape 1 — choix de la langue au démarrage
+  if (state.language === null) {
+    const detected = detectLanguage(trimmed);
+    if (detected) {
+      state.language = detected;
+      const welcomeReply = detected === 'fr'
+        ? `Bonjour ! ${t('fr').welcome(restaurant.name)}`
+        : t('en').welcome(restaurant.name);
+      return {
+        reply: welcomeReply,
+        quickReplies: t(detected).quickReplies.initial as unknown as string[],
+      };
+    }
+    // Pas encore de langue choisie — demander
+    return {
+      reply: `Bonjour / Hello 👋\n\nFrançais ou English ?`,
+      quickReplies: ['Français', 'English'],
+    };
+  }
 
   if (state.reservationActive) {
     return advanceReservationFlow(state, trimmed, restaurant);

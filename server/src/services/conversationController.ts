@@ -264,7 +264,7 @@ async function advanceReservationFlow(
     ``,
     `Reservation ID: #${reservation.id}`,
     ``,
-    `We look forward to welcoming you to ${restaurant.name}. Is there anything else I can help you with?`,
+    `We look forward to welcoming you to ${restaurant.name}.${reservation.email ? `\n\nA confirmation email has been sent to ${reservation.email}.` : ''}\n\nIs there anything else I can help you with?`,
   ];
 
   return {

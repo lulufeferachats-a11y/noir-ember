@@ -21,6 +21,9 @@ export function getOrCreateSession(sessionId: string, restaurantId: string): Con
     draft: {},
     memory: {},
   };
+
+  sessions.set(sessionId, fresh);
+  return fresh;
 }
 
 export function saveSession(state: ConversationState): void {
